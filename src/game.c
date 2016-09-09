@@ -43,6 +43,7 @@ UPDATE(Update) /* memory, input */
         }
 
         /* TODO(david): initialize the game state here */
+        state->manager = ECS_NewManager(state->game_stack);
     }
 
     /* Handle Input ------------------------------------------------------- */

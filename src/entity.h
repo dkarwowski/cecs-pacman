@@ -2,31 +2,44 @@
 #define _ENTITY_h_
 
 #include "math.h"
+#include <SDL/SDL.h>
 
 struct ECS_Position {
-    struct Vec2 diff;
-    int x, y;
+    u8 x, y;
 };
 
 struct ECS_Movement {
     struct Vec2 vel;
+    struct Vec2 diff;
 };
 
 struct ECS_Render {
-    int frame;
-    int dt;
+    u8 w, h;
+    SDL_Color color;
+    //u8 frame;
+    //u8 dt;
 };
 
 struct ECS_Edible {
-    int score;
+    u32 score;
     bool delete;
+};
+
+struct ECS_Player {
+    u8 lives;
+};
+
+struct ECS_AI {
+    bool run_away;
 };
 
 #define COMPONENT_BIND(_def) \
     _def(Position, 0)        \
     _def(Movement, 1)        \
     _def(Render,   2)        \
-    _def(Edible,   3)
+    _def(Edible,   3)        \
+    _def(AI,       4)        \
+    _def(Player,   5)        \
 
 enum ECS_ComponentMask {
     ECS_CNone     = 0,

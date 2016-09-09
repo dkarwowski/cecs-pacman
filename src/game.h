@@ -7,7 +7,7 @@
 
 #include <SDL2/SDL_ttf.h>
 
-#define PIXEL_PERSQUARE 64
+#define PIXEL_PERSQUARE (32)
 
 struct GameState {
     bool init;
@@ -16,6 +16,8 @@ struct GameState {
     struct Stack *temp_stack;
 
     TTF_Font *font;
+
+    struct ECS_Manager *manager;
 
     struct Console *console;
 };
