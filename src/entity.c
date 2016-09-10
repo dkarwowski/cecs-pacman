@@ -3,7 +3,7 @@
 
 #include <string.h>
 
-#define MAX_ENTITIES 256
+#define MAX_ENTITIES 512
 struct ECS_Manager {
     int next_eid;
 
@@ -13,10 +13,6 @@ struct ECS_Manager {
     struct ECS_ ## name name[MAX_ENTITIES];
     COMPONENT_BIND(C_ARRAY)
 #undef C_ARRAY
-
-    /* to iterate through */
-    u64 _comp_mask;
-    u32 _curr_eid;
 };
 
 /**
@@ -47,8 +43,8 @@ ECS_AddComponent(struct ECS_Manager *manager, u32 eid, void *component, enum ECS
 
     switch(componentid) {
 #define C_SWITCH(name, num)                                                \
-        case ECS_C##name:                                                  \
-            memcpy(manager->name, component, sizeof(struct ECS_ ## name)); \
+        case ECS_C ## name:                                                \
+            memcpy(manager->name + eid, component, sizeof(struct ECS_ ## name)); \
             break;
 
         COMPONENT_BIND(C_SWITCH)
@@ -122,19 +118,31 @@ ECS_RemoveEntity(struct ECS_Manager *manager, u32 eid)
  * @return : -1 if none found, or the proper eid
  */
 i64
-ECS_NextEntity(struct ECS_Manager *manager, enum ECS_ComponentMask components)
+ECS_NextEntity(struct ECS_Manager *manager, struct ECS_Iter *iter)
 {
-    if (components) {
-        manager->_curr_eid = 0;
-        manager->_comp_mask = components;
-    }
+    while (iter->eid < manager->next_eid 
+            && (manager->entity[iter->eid] & iter->mask) != iter->mask)
+        ++iter->eid;
 
-    while (manager->_curr_eid < manager->next_eid 
-            && (manager->entity[manager->_curr_eid] & manager->_comp_mask) != manager->_comp_mask)
-        ++manager->_curr_eid;
-
-    if (manager->_curr_eid < manager->next_eid)
-        return manager->_curr_eid++;
+    if (iter->eid++ < manager->next_eid)
+        return iter->eid - 1;
     return -1;
+}
+
+/**
+ */
+void *
+ECS_GetComponent(struct ECS_Manager *manager, u32 eid, enum ECS_ComponentMask componentid)
+{
+    ASSERT(eid < manager->next_eid);
+    switch (componentid) {
+#define C_COMPONENT(name, num) \
+        case ECS_C ## name : \
+            return manager->name + eid;
+        COMPONENT_BIND(C_COMPONENT)
+#undef C_COMPONENT
+        default:
+            return NULL;
+    }
 }
 

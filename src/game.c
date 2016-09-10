@@ -4,6 +4,7 @@
 
 #include "main.h"
 #include "math.h"
+#include "e_factory.h"
 
 #include "game.h"
 
@@ -44,6 +45,58 @@ UPDATE(Update) /* memory, input */
 
         /* TODO(david): initialize the game state here */
         state->manager = ECS_NewManager(state->game_stack);
+
+        u8 array[21][19] = { { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+                             { 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+                             { 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1 },
+                             { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+                             { 1, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 0, 1 },
+                             { 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1 },
+                             { 1, 1, 1, 1, 0, 1, 1, 1, 9, 1, 9, 1, 1, 1, 0, 1, 1, 1, 1 },
+                             { 9, 9, 9, 1, 0, 1, 9, 9, 9, 2, 9, 9, 9, 1, 0, 1, 9, 9, 9 },
+                             { 1, 1, 1, 1, 0, 1, 9, 1, 1, 1, 1, 1, 9, 1, 0, 1, 1, 1, 1 },
+                             { 9, 9, 9, 9, 0, 9, 9, 1, 3, 4, 5, 1, 9, 9, 0, 9, 9, 9, 9 },
+                             { 1, 1, 1, 1, 0, 1, 9, 1, 1, 1, 1, 1, 9, 1, 0, 1, 1, 1, 1 },
+                             { 9, 9, 9, 1, 0, 1, 9, 9, 9, 9, 9, 9, 9, 1, 0, 1, 9, 9, 9 },
+                             { 1, 1, 1, 1, 0, 1, 9, 1, 1, 1, 1, 1, 9, 1, 0, 1, 1, 1, 1 },
+                             { 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+                             { 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1 },
+                             { 1, 0, 0, 1, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 1, 0, 0, 1 },
+                             { 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1 },
+                             { 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1 },
+                             { 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1 },
+                             { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+                             { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 } };
+        for (int r = 0; r < 21; r++) {
+            for (int c = 0; c < 19; c++) {
+                u8 val = array[r][c];
+                switch (val) {
+                    case 0:
+                        ECS_NewDot(state->manager, c, r);
+                        break;
+                    case 1:
+                        ECS_NewWall(state->manager, c, r);
+                        break;
+                    case 2:
+                        ECS_NewGhost(state->manager, c, r, (SDL_Color){255, 0, 0, 255});
+                        break;
+                    case 3:
+                        ECS_NewGhost(state->manager, c, r, (SDL_Color){0, 255, 0, 255});
+                        break;
+                    case 4:
+                        ECS_NewGhost(state->manager, c, r, (SDL_Color){0, 0, 255, 255});
+                        break;
+                    case 5:
+                        ECS_NewGhost(state->manager, c, r, (SDL_Color){0, 255, 255, 255});
+                        break;
+                    case 7:
+                        ECS_NewPlayer(state->manager, c, r);
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
     }
 
     /* Handle Input ------------------------------------------------------- */
@@ -68,6 +121,67 @@ UPDATE(Update) /* memory, input */
         return;
 
     /* TODO(david): insert game code here */
+
+    /* INPUT SYSTEM */
+    struct ECS_Iter iter = { ECS_CPlayer | ECS_CMovement, 0 };
+    i64 eid;
+    while ((eid = ECS_NextEntity(state->manager, &iter)) != -1) {
+        struct ECS_Movement *move = ECS_GetComponent(state->manager, eid, ECS_CMovement);
+
+        struct Vec2 new_vel = { 0.f, 0.f };
+        if (I_IsPressed(&input->move_left))
+            new_vel.x -= move->speed;
+        if (I_IsPressed(&input->move_right))
+            new_vel.x += move->speed;
+        if (I_IsPressed(&input->move_up))
+            new_vel.y -= move->speed;
+        if (I_IsPressed(&input->move_down))
+            new_vel.y += move->speed;
+        move->vel = new_vel;
+
+        if (fabsf(move->vel.x) < 0.0001f)
+            move->diff.x = 0.5f;
+        if (fabsf(move->vel.y) < 0.0001f)
+            move->diff.y = 0.5f;
+    }
+
+    /* movement system */
+    iter = (struct ECS_Iter){ ECS_CPosition | ECS_CMovement, 0 };
+    while ((eid = ECS_NextEntity(state->manager, &iter)) != -1) {
+        struct ECS_Position *pos = ECS_GetComponent(state->manager, eid, ECS_CPosition);
+        struct ECS_Movement *move = ECS_GetComponent(state->manager, eid, ECS_CMovement);
+
+        move->diff = V2_Add(move->diff, V2_Mul(SEC_PER_UPDATE, move->vel));
+        
+        int x = move->diff.x + pos->x;
+        int y = move->diff.y + pos->y;
+
+        bool collide = false;
+
+        struct ECS_Iter inner = { ECS_CPosition, 0 };
+        i64 inner_eid;
+        while ((x != pos->x || y != pos->y)
+                && (inner_eid = ECS_NextEntity(state->manager, &inner)) != -1) {
+            if (inner_eid == eid)
+                continue;
+
+            struct ECS_Position *inner_pos = ECS_GetComponent(state->manager, inner_eid, ECS_CPosition);
+
+            if (inner_pos->x == x && inner_pos->y == y) {
+                collide = true;
+                break;
+            }
+        }
+
+        if ((x != pos->x || y != pos->y) && !collide) {
+            pos->x = x;
+            move->diff.x = 0.5f;
+            pos->y = y;
+            move->diff.y = 0.5f;
+        }
+
+        move->vel = (struct Vec2){ 0.f, 0.f };
+    }
 }
 
 /**
@@ -97,6 +211,17 @@ RENDER(Render) /* memory, renderer, dt */
     SDL_RenderClear(renderer);
 
     /* TODO(david): insert render code here */
+    struct ECS_Iter iter = { ECS_CRender | ECS_CPosition, 0 };
+    i64 eid;
+    while ((eid = ECS_NextEntity(state->manager, &iter)) != -1) {
+        struct ECS_Position *pos = ECS_GetComponent(state->manager, eid, ECS_CPosition);
+        struct ECS_Render *render = ECS_GetComponent(state->manager, eid, ECS_CRender);
+
+        SDL_Rect rect = { pos->x * PIXEL_PERSQUARE, pos->y * PIXEL_PERSQUARE,
+                          render->w * PIXEL_PERSQUARE, render->h * PIXEL_PERSQUARE };
+        SDL_SetRenderDrawColor(renderer, render->color.r, render->color.g, render->color.b, render->color.a);
+        SDL_RenderFillRect(renderer, &rect);
+    }
 
     if (I_IsEnabled(state->console) && state->font != NULL) {
         I_RenderConsole(renderer, state->font, state->console);

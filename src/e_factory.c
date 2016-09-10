@@ -8,13 +8,13 @@
  * @return : eid of the player
  */
 u32
-ECS_NewPlayer(struct ECS_Manager *manager)
+ECS_NewPlayer(struct ECS_Manager *manager, int x, int y)
 {
     u32 result = ECS_AddEntity(manager);
 
-    struct ECS_Position position = { 10, 14 };
-    struct ECS_Movement movement = { (struct Vec2){ 0.f, 0.f }, (struct Vec2){ 0.f, 0.f } };
-    struct ECS_Render   render   = { 1, 1, (SDL_Color){ 125, 125, 0, 255 } };
+    struct ECS_Position position = { x, y };
+    struct ECS_Movement movement = { (struct Vec2){ 0.f, 0.f }, (struct Vec2){ 0.5f, 0.5f }, 1.5f };
+    struct ECS_Render   render   = { 1, 1, (SDL_Color){ 255, 255, 0, 255 } };
     struct ECS_Player   player   = { 3 };
 
     ECS_AddComponent(manager, result, &position, ECS_CPosition);
@@ -86,7 +86,7 @@ ECS_NewGhost(struct ECS_Manager *manager, int x, int y, SDL_Color color)
     u32 result = ECS_AddEntity(manager);
 
     struct ECS_Position position = { x, y };
-    struct ECS_Movement movement = { (struct Vec2) { 0.f, 0.f }, (struct Vec2) { 0.f, 0.f} };
+    struct ECS_Movement movement = { (struct Vec2) { 0.f, 0.f }, (struct Vec2) { 0.5f, 0.5f }, 1.f };
     struct ECS_Render   render   = { 1, 1, color };
     struct ECS_AI       ai       = { false };
 

@@ -11,13 +11,12 @@ struct ECS_Position {
 struct ECS_Movement {
     struct Vec2 vel;
     struct Vec2 diff;
+    r32 speed;
 };
 
 struct ECS_Render {
-    u8 w, h;
+    int w, h;
     SDL_Color color;
-    //u8 frame;
-    //u8 dt;
 };
 
 struct ECS_Edible {
@@ -49,16 +48,22 @@ enum ECS_ComponentMask {
 #undef C_MASK
 };
 
+struct ECS_Iter {
+    enum ECS_ComponentMask mask;
+    u32 eid;
+};
+
 struct ECS_Manager;
 struct Stack;
 
 struct ECS_Manager *ECS_NewManager(struct Stack *stack);
 
-void ECS_AddComponent(struct ECS_Manager *manager, u32 eid, void *component, enum ECS_ComponentMask componentid);
-void ECS_RemoveComponent(struct ECS_Manager *manager, u32 eid, enum ECS_ComponentMask componentid);
+void  ECS_AddComponent(struct ECS_Manager *manager, u32 eid, void *component, enum ECS_ComponentMask componentid);
+void  ECS_RemoveComponent(struct ECS_Manager *manager, u32 eid, enum ECS_ComponentMask componentid);
+void *ECS_GetComponent(struct ECS_Manager *manager, u32 eid, enum ECS_ComponentMask componentid);
 
 u32  ECS_AddEntity(struct ECS_Manager *manager);
 void ECS_RemoveEntity(struct ECS_Manager *manager, u32 eid);
-i64  ECS_NextEntity(struct ECS_Manager *manager, enum ECS_ComponentMask components);
+i64  ECS_NextEntity(struct ECS_Manager *manager, struct ECS_Iter *iter);
 
 #endif
