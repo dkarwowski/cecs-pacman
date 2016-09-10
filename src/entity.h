@@ -6,6 +6,7 @@
 
 struct ECS_Position {
     u8 x, y;
+    bool stop;
 };
 
 struct ECS_Movement {
@@ -26,10 +27,15 @@ struct ECS_Edible {
 
 struct ECS_Player {
     u8 lives;
+    u32 score;
 };
 
 struct ECS_AI {
     bool run_away;
+};
+
+struct ECS_Collided {
+    u32 with;
 };
 
 #define COMPONENT_BIND(_def) \
@@ -39,6 +45,7 @@ struct ECS_AI {
     _def(Edible,   3)        \
     _def(AI,       4)        \
     _def(Player,   5)        \
+    _def(Collided, 6)        \
 
 enum ECS_ComponentMask {
     ECS_CNone     = 0,
@@ -61,6 +68,7 @@ struct ECS_Manager *ECS_NewManager(struct Stack *stack);
 void  ECS_AddComponent(struct ECS_Manager *manager, u32 eid, void *component, enum ECS_ComponentMask componentid);
 void  ECS_RemoveComponent(struct ECS_Manager *manager, u32 eid, enum ECS_ComponentMask componentid);
 void *ECS_GetComponent(struct ECS_Manager *manager, u32 eid, enum ECS_ComponentMask componentid);
+bool  ECS_HasComponent(struct ECS_Manager *manager, u32 eid, enum ECS_ComponentMask componentid);
 
 u32  ECS_AddEntity(struct ECS_Manager *manager);
 void ECS_RemoveEntity(struct ECS_Manager *manager, u32 eid);

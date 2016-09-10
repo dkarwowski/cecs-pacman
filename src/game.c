@@ -90,7 +90,7 @@ UPDATE(Update) /* memory, input */
                         ECS_NewGhost(state->manager, c, r, (SDL_Color){0, 255, 255, 255});
                         break;
                     case 7:
-                        ECS_NewPlayer(state->manager, c, r);
+                        state->player_eid = ECS_NewPlayer(state->manager, c, r);
                         break;
                     default:
                         break;
@@ -156,7 +156,7 @@ UPDATE(Update) /* memory, input */
         int x = move->diff.x + pos->x;
         int y = move->diff.y + pos->y;
 
-        bool collide = false;
+        bool stop = false;
 
         struct ECS_Iter inner = { ECS_CPosition, 0 };
         i64 inner_eid;
@@ -168,19 +168,40 @@ UPDATE(Update) /* memory, input */
             struct ECS_Position *inner_pos = ECS_GetComponent(state->manager, inner_eid, ECS_CPosition);
 
             if (inner_pos->x == x && inner_pos->y == y) {
-                collide = true;
+                struct ECS_Collided collided = { inner_eid };
+                ECS_AddComponent(state->manager, eid, &collided, ECS_CCollided);
+                stop = inner_pos->stop;
                 break;
             }
         }
 
-        if ((x != pos->x || y != pos->y) && !collide) {
+        if ((x != pos->x || y != pos->y) && !stop) {
             pos->x = x;
             move->diff.x = 0.5f;
             pos->y = y;
             move->diff.y = 0.5f;
         }
 
+        if (move->diff.x < 0.f || 1.f < move->diff.x)
+            move->diff.x = 0.5f;
+        if (move->diff.y < 0.f || 1.f < move->diff.y)
+            move->diff.y = 0.5f;
+
         move->vel = (struct Vec2){ 0.f, 0.f };
+    }
+
+    /* Game Logic System */
+    struct ECS_Player *player = ECS_GetComponent(state->manager, state->player_eid, ECS_CPlayer);
+    iter = (struct ECS_Iter){ ECS_CCollided, 0 };
+    while ((eid = ECS_NextEntity(state->manager, &iter)) != -1) {
+        struct ECS_Collided *collide = ECS_GetComponent(state->manager, eid, ECS_CCollided);
+        if (ECS_HasComponent(state->manager, collide->with, ECS_CEdible)) {
+            struct ECS_Edible *edible = ECS_GetComponent(state->manager, collide->with, ECS_CEdible);
+            player->score += edible->score;
+            if (edible->delete)
+                ECS_RemoveEntity(state->manager, collide->with);
+        }
+        ECS_RemoveComponent(state->manager, eid, ECS_CCollided);
     }
 }
 

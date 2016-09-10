@@ -12,7 +12,7 @@ ECS_NewPlayer(struct ECS_Manager *manager, int x, int y)
 {
     u32 result = ECS_AddEntity(manager);
 
-    struct ECS_Position position = { x, y };
+    struct ECS_Position position = { x, y, false };
     struct ECS_Movement movement = { (struct Vec2){ 0.f, 0.f }, (struct Vec2){ 0.5f, 0.5f }, 1.5f };
     struct ECS_Render   render   = { 1, 1, (SDL_Color){ 255, 255, 0, 255 } };
     struct ECS_Player   player   = { 3 };
@@ -38,7 +38,7 @@ ECS_NewWall(struct ECS_Manager *manager, int x, int y)
 {
     u32 result = ECS_AddEntity(manager);
 
-    struct ECS_Position position = { x, y };
+    struct ECS_Position position = { x, y, true };
     struct ECS_Render   render   = { 1, 1, (SDL_Color){ 0, 125, 125, 255 } };
 
     ECS_AddComponent(manager, result, &position, ECS_CPosition);
@@ -60,7 +60,7 @@ ECS_NewDot(struct ECS_Manager *manager, int x, int y)
 {
     u32 result = ECS_AddEntity(manager);
 
-    struct ECS_Position position = { x, y };
+    struct ECS_Position position = { x, y, false };
     struct ECS_Render   render   = { 1, 1, (SDL_Color){ 125, 0, 125, 255 } };
     struct ECS_Edible   edible   = { 10, true };
 
@@ -85,7 +85,7 @@ ECS_NewGhost(struct ECS_Manager *manager, int x, int y, SDL_Color color)
 {
     u32 result = ECS_AddEntity(manager);
 
-    struct ECS_Position position = { x, y };
+    struct ECS_Position position = { x, y, false };
     struct ECS_Movement movement = { (struct Vec2) { 0.f, 0.f }, (struct Vec2) { 0.5f, 0.5f }, 1.f };
     struct ECS_Render   render   = { 1, 1, color };
     struct ECS_AI       ai       = { false };

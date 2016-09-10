@@ -67,7 +67,7 @@ ECS_AddComponent(struct ECS_Manager *manager, u32 eid, void *component, enum ECS
 void
 ECS_RemoveComponent(struct ECS_Manager *manager, u32 eid, enum ECS_ComponentMask componentid)
 {
-    ASSERT(-1 < eid && eid < manager->next_eid);
+    ASSERT(eid < manager->next_eid);
     manager->entity[eid] &= ~componentid;
 }
 
@@ -97,8 +97,10 @@ ECS_AddEntity(struct ECS_Manager *manager)
 void
 ECS_RemoveEntity(struct ECS_Manager *manager, u32 eid)
 {
-    ASSERT(-1 < eid && eid < MAX_ENTITIES);
+    ASSERT(eid < MAX_ENTITIES);
     ASSERT(manager->next_eid > 0);
+    
+    printf("delete\n");
 
     if (--manager->next_eid > eid) {
 #define C_COPY(name, num) \
@@ -144,5 +146,15 @@ ECS_GetComponent(struct ECS_Manager *manager, u32 eid, enum ECS_ComponentMask co
         default:
             return NULL;
     }
+}
+
+/**
+ */
+bool
+ECS_HasComponent(struct ECS_Manager *manager, u32 eid, enum ECS_ComponentMask componentid)
+{
+    ASSERT(eid < manager->next_eid);
+    bool result = componentid & manager->entity[eid];
+    return result;
 }
 
