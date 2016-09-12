@@ -8,6 +8,74 @@
 
 #include "game.h"
 
+void
+HandleCollides( struct ECS_Manager *manager,
+                u32 eid,
+                struct ECS_Position *pos,
+                struct ECS_Movement *move,
+                struct ECS_Bounding *box )
+{
+    struct Vec2 dpos = V2_Mul(SEC_PER_UPDATE, move->vel);
+    bool stop = false;
+
+    r32 tleft = 1.0f;
+    for (int z = 0; z < 4 && tleft > 0.0f; z++) {
+        struct Vec2 normal = { 0.f, 0.f };
+        r32 tmin = 1.0f;
+        
+        u32 ieid;
+        struct ECS_Iter iter = { ECS_CBounding | ECS_CPosition, 0 };
+        while ((ieid = ECS_NextEntity(manager, &iter)) != -1) {
+            if (ieid == eid)
+                continue;
+
+            struct ECS_Position *ipos = ECS_GetComponent(manager, ieid, ECS_CPosition);
+            struct ECS_Bounding *ibox = ECS_GetComponent(manager, ieid, ECS_CBounding);
+
+            r32 points[] = { ipos->pos.x - ibox->dim.w - box->dim.w - pos->pos.x,
+                               ipos->pos.y - ibox->dim.h - box->dim.h - pos->pos.y,
+                               ipos->pos.x + ibox->dim.w + box->dim.w - pos->pos.x,
+                               ipos->pos.y + ibox->dim.h + box->dim.h - pos->pos.y };
+
+            struct {
+                r32 x0, x1, y, dy, dx;
+                struct Vec2 normal;
+            } walls[] = {{ points[0], points[2], points[1], dpos.y, dpos.x, {  0.f, -1.f } },
+                         { points[0], points[2], points[3], dpos.y, dpos.x, {  0.f,  1.f } },
+                         { points[1], points[3], points[0], dpos.x, dpos.y, { -1.f,  0.f } },
+                         { points[1], points[3], points[2], dpos.x, dpos.y, {  1.f,  0.f } }};
+
+            for (int walli = 0; walli < 4; walli++) {
+                r32 eps = 0.001f;
+                if (fabsf(walls[walli].dy) > eps) {
+                    r32 t = walls[walli].y / walls[walli].dy;
+                    r32 x = t * walls[walli].dx;
+                    if (t > 0.0f && walls[walli].x0 < x && x < walls[walli].x1 && tmin > t) {
+                        if (ibox->stop) {
+                            tmin = MAX(0.f, t - eps);
+                            normal = walls[walli].normal;
+                            stop = true;
+                        }
+                        struct ECS_Collided col = { ieid };
+                        ECS_AddComponent(manager, eid, &col, ECS_CCollided);
+                    }
+                }
+            }
+        }
+
+        if (stop) {
+            pos->pos = V2_Add(pos->pos, V2_Mul(tmin, dpos));
+            move->vel = V2_Sub(move->vel, V2_Mul(V2_Dot(move->vel, normal), normal));
+            dpos = V2_Sub(dpos, V2_Mul(V2_Dot(dpos, normal), normal));
+            tleft -= tmin;
+        }
+        else {
+            pos->pos = V2_Add(pos->pos, dpos);
+            break;
+        }
+    }
+}
+
 /**
  * Update the game state and objects
  * @memory : the memory we keep constant
@@ -138,12 +206,18 @@ UPDATE(Update) /* memory, input */
         if (I_IsPressed(&input->move_down))
             new_vel.y += move->speed;
         move->vel = new_vel;
-
-        if (fabsf(move->vel.x) < 0.0001f)
-            move->diff.x = 0.5f;
-        if (fabsf(move->vel.y) < 0.0001f)
-            move->diff.y = 0.5f;
     }
+
+    /*
+    struct ECS_Position *player_pos = ECS_GetComponent(state->manager, eid, ECS_CPosition);
+    iter = (struct ECS_Iter){ ECS_CAI | ECS_CMovement, 0 };
+    while ((eid = ECS_NextEntity(state->manager, &iter)) != -1) {
+        struct ECS_Movement *move = ECS_GetComponent(state->manager, eid, ECS_CMovement);
+        struct ECS_AI       *ai   = ECS_GetComponent(state->manager, eid, ECS_CAI);
+
+        * determine next move /
+    }
+    */
 
     /* movement system */
     iter = (struct ECS_Iter){ ECS_CPosition | ECS_CMovement, 0 };
@@ -151,43 +225,21 @@ UPDATE(Update) /* memory, input */
         struct ECS_Position *pos = ECS_GetComponent(state->manager, eid, ECS_CPosition);
         struct ECS_Movement *move = ECS_GetComponent(state->manager, eid, ECS_CMovement);
 
-        move->diff = V2_Add(move->diff, V2_Mul(SEC_PER_UPDATE, move->vel));
-        
-        int x = move->diff.x + pos->x;
-        int y = move->diff.y + pos->y;
-
-        bool stop = false;
-
-        struct ECS_Iter inner = { ECS_CPosition, 0 };
-        i64 inner_eid;
-        while ((x != pos->x || y != pos->y)
-                && (inner_eid = ECS_NextEntity(state->manager, &inner)) != -1) {
-            if (inner_eid == eid)
-                continue;
-
-            struct ECS_Position *inner_pos = ECS_GetComponent(state->manager, inner_eid, ECS_CPosition);
-
-            if (inner_pos->x == x && inner_pos->y == y) {
-                struct ECS_Collided collided = { inner_eid };
-                ECS_AddComponent(state->manager, eid, &collided, ECS_CCollided);
-                stop = inner_pos->stop;
-                break;
-            }
+        if (ECS_HasComponent(state->manager, eid, ECS_CBounding)) {
+            struct ECS_Bounding *box = ECS_GetComponent(state->manager, eid, ECS_CBounding);
+            HandleCollides(state->manager, eid, pos, move, box);
         }
 
-        if ((x != pos->x || y != pos->y) && !stop) {
-            pos->x = x;
-            move->diff.x = 0.5f;
-            pos->y = y;
-            move->diff.y = 0.5f;
-        }
+        move->vel = V2_Mul(0.9f, move->vel);
 
-        if (move->diff.x < 0.f || 1.f < move->diff.x)
-            move->diff.x = 0.5f;
-        if (move->diff.y < 0.f || 1.f < move->diff.y)
-            move->diff.y = 0.5f;
-
-        move->vel = (struct Vec2){ 0.f, 0.f };
+        if (0 > pos->pos.x)
+            pos->pos.x += 18.5f;
+        if (pos->pos.x > 18.5f)
+            pos->pos.x -= 18.5f;
+        if (0 > pos->pos.y)
+            pos->pos.y += 19.5f;
+        if (pos->pos.y > 19.5f)
+            pos->pos.y -= 19.5f;
     }
 
     /* Game Logic System */
@@ -238,8 +290,10 @@ RENDER(Render) /* memory, renderer, dt */
         struct ECS_Position *pos = ECS_GetComponent(state->manager, eid, ECS_CPosition);
         struct ECS_Render *render = ECS_GetComponent(state->manager, eid, ECS_CRender);
 
-        SDL_Rect rect = { pos->x * PIXEL_PERSQUARE, pos->y * PIXEL_PERSQUARE,
-                          render->w * PIXEL_PERSQUARE, render->h * PIXEL_PERSQUARE };
+        i32 top  = pos->pos.x * PIXEL_PERSQUARE - render->w * PIXEL_PERSQUARE + PIXEL_PERSQUARE;
+        i32 left = pos->pos.y * PIXEL_PERSQUARE - render->h * PIXEL_PERSQUARE + PIXEL_PERSQUARE;
+        SDL_Rect rect = { top, left,
+                          2 * render->w * PIXEL_PERSQUARE, 2 * render->h * PIXEL_PERSQUARE };
         SDL_SetRenderDrawColor(renderer, render->color.r, render->color.g, render->color.b, render->color.a);
         SDL_RenderFillRect(renderer, &rect);
     }

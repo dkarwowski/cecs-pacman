@@ -99,8 +99,6 @@ ECS_RemoveEntity(struct ECS_Manager *manager, u32 eid)
 {
     ASSERT(eid < MAX_ENTITIES);
     ASSERT(manager->next_eid > 0);
-    
-    printf("delete\n");
 
     if (--manager->next_eid > eid) {
 #define C_COPY(name, num) \

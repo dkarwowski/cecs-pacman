@@ -12,12 +12,14 @@ ECS_NewPlayer(struct ECS_Manager *manager, int x, int y)
 {
     u32 result = ECS_AddEntity(manager);
 
-    struct ECS_Position position = { x, y, false };
-    struct ECS_Movement movement = { (struct Vec2){ 0.f, 0.f }, (struct Vec2){ 0.5f, 0.5f }, 1.5f };
-    struct ECS_Render   render   = { 1, 1, (SDL_Color){ 255, 255, 0, 255 } };
+    struct ECS_Position position = { (struct Vec2){ x, y } };
+    struct ECS_Bounding bounding = { false, (struct Vec2){ 0.45f, 0.45f } };
+    struct ECS_Movement movement = { (struct Vec2){ 0.f, 0.f }, 2.f };
+    struct ECS_Render   render   = { 0.45f, 0.45f, (SDL_Color){ 255, 255, 0, 255 } };
     struct ECS_Player   player   = { 3 };
 
     ECS_AddComponent(manager, result, &position, ECS_CPosition);
+    ECS_AddComponent(manager, result, &bounding, ECS_CBounding);
     ECS_AddComponent(manager, result, &movement, ECS_CMovement);
     ECS_AddComponent(manager, result, &render, ECS_CRender);
     ECS_AddComponent(manager, result, &player, ECS_CPlayer);
@@ -38,10 +40,12 @@ ECS_NewWall(struct ECS_Manager *manager, int x, int y)
 {
     u32 result = ECS_AddEntity(manager);
 
-    struct ECS_Position position = { x, y, true };
-    struct ECS_Render   render   = { 1, 1, (SDL_Color){ 0, 125, 125, 255 } };
+    struct ECS_Position position = { (struct Vec2){ x, y } };
+    struct ECS_Bounding bounding = { true, (struct Vec2){ 0.5f, 0.5f } };
+    struct ECS_Render   render   = { 0.5f, 0.5f, (SDL_Color){ 0, 125, 125, 255 } };
 
     ECS_AddComponent(manager, result, &position, ECS_CPosition);
+    ECS_AddComponent(manager, result, &bounding, ECS_CBounding);
     ECS_AddComponent(manager, result, &render, ECS_CRender);
 
     return result;
@@ -60,11 +64,13 @@ ECS_NewDot(struct ECS_Manager *manager, int x, int y)
 {
     u32 result = ECS_AddEntity(manager);
 
-    struct ECS_Position position = { x, y, false };
-    struct ECS_Render   render   = { 1, 1, (SDL_Color){ 125, 0, 125, 255 } };
+    struct ECS_Position position = { (struct Vec2) { x, y } };
+    struct ECS_Bounding bounding = { false, (struct Vec2){ 0.25f, 0.25f } };
+    struct ECS_Render   render   = { 0.25f, 0.25f, (SDL_Color){ 125, 0, 125, 255 } };
     struct ECS_Edible   edible   = { 10, true };
 
     ECS_AddComponent(manager, result, &position, ECS_CPosition);
+    ECS_AddComponent(manager, result, &bounding, ECS_CBounding);
     ECS_AddComponent(manager, result, &render, ECS_CRender);
     ECS_AddComponent(manager, result, &edible, ECS_CEdible);
 
@@ -85,12 +91,14 @@ ECS_NewGhost(struct ECS_Manager *manager, int x, int y, SDL_Color color)
 {
     u32 result = ECS_AddEntity(manager);
 
-    struct ECS_Position position = { x, y, false };
-    struct ECS_Movement movement = { (struct Vec2) { 0.f, 0.f }, (struct Vec2) { 0.5f, 0.5f }, 1.f };
-    struct ECS_Render   render   = { 1, 1, color };
+    struct ECS_Position position = { (struct Vec2){ x, y } };
+    struct ECS_Bounding bounding = { false, (struct Vec2){ 0.48f, 0.48f } };
+    struct ECS_Movement movement = { (struct Vec2) { 0.f, 0.f }, 1.f };
+    struct ECS_Render   render   = { 0.5f, 0.5f, color };
     struct ECS_AI       ai       = { false };
 
     ECS_AddComponent(manager, result, &position, ECS_CPosition);
+    ECS_AddComponent(manager, result, &bounding, ECS_CBounding);
     ECS_AddComponent(manager, result, &movement, ECS_CMovement);
     ECS_AddComponent(manager, result, &render, ECS_CRender);
     ECS_AddComponent(manager, result, &ai, ECS_CAI);

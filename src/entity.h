@@ -5,18 +5,21 @@
 #include <SDL/SDL.h>
 
 struct ECS_Position {
-    u8 x, y;
+    struct Vec2 pos;
+};
+
+struct ECS_Bounding {
     bool stop;
+    struct Vec2 dim;
 };
 
 struct ECS_Movement {
     struct Vec2 vel;
-    struct Vec2 diff;
     r32 speed;
 };
 
 struct ECS_Render {
-    int w, h;
+    r32 w, h;
     SDL_Color color;
 };
 
@@ -36,6 +39,7 @@ struct ECS_AI {
 
 struct ECS_Collided {
     u32 with;
+    struct Vec2 normal;
 };
 
 #define COMPONENT_BIND(_def) \
@@ -46,6 +50,7 @@ struct ECS_Collided {
     _def(AI,       4)        \
     _def(Player,   5)        \
     _def(Collided, 6)        \
+    _def(Bounding, 7)        \
 
 enum ECS_ComponentMask {
     ECS_CNone     = 0,
