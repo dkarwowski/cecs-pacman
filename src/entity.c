@@ -67,6 +67,8 @@ ECS_AddComponent(struct ECS_Manager *manager, u32 eid, void *component, enum ECS
 void
 ECS_RemoveComponent(struct ECS_Manager *manager, u32 eid, enum ECS_ComponentMask componentid)
 {
+    if (eid >= manager->next_eid)
+        eid = manager->entity[eid];
     ASSERT(eid < manager->next_eid);
     manager->entity[eid] &= ~componentid;
 }
@@ -107,6 +109,8 @@ ECS_RemoveEntity(struct ECS_Manager *manager, u32 eid)
         COMPONENT_BIND(C_COPY)
 #undef C_COPY
     }
+
+    manager->entity[manager->next_eid] = eid;
 }
 
 /**
@@ -134,6 +138,8 @@ ECS_NextEntity(struct ECS_Manager *manager, struct ECS_Iter *iter)
 void *
 ECS_GetComponent(struct ECS_Manager *manager, u32 eid, enum ECS_ComponentMask componentid)
 {
+    if (eid >= manager->next_eid)
+        eid = manager->entity[eid];
     ASSERT(eid < manager->next_eid);
     switch (componentid) {
 #define C_COMPONENT(name, num) \

@@ -8,6 +8,29 @@
 
 #include "game.h"
 
+static
+u8 init_map[21][19] = { { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+                        { 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1 },
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+                        { 1, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 0, 1 },
+                        { 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1 },
+                        { 1, 1, 1, 1, 0, 1, 1, 1, 9, 1, 9, 1, 1, 1, 0, 1, 1, 1, 1 },
+                        { 9, 9, 9, 1, 0, 1, 9, 9, 9, 2, 9, 9, 9, 1, 0, 1, 9, 9, 9 },
+                        { 1, 1, 1, 1, 0, 1, 9, 1, 1, 8, 1, 1, 9, 1, 0, 1, 1, 1, 1 },
+                        { 9, 9, 9, 9, 0, 9, 9, 1, 3, 4, 5, 1, 9, 9, 0, 9, 9, 9, 9 },
+                        { 1, 1, 1, 1, 0, 1, 9, 1, 1, 1, 1, 1, 9, 1, 0, 1, 1, 1, 1 },
+                        { 9, 9, 9, 1, 0, 1, 9, 9, 9, 9, 9, 9, 9, 1, 0, 1, 9, 9, 9 },
+                        { 1, 1, 1, 1, 0, 1, 9, 1, 1, 1, 1, 1, 9, 1, 0, 1, 1, 1, 1 },
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+                        { 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1 },
+                        { 1, 0, 0, 1, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 1, 0, 0, 1 },
+                        { 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1 },
+                        { 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1 },
+                        { 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1 },
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+                        { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 } };
+
 void
 HandleCollides( struct ECS_Manager *manager,
                 u32 eid,
@@ -74,6 +97,11 @@ HandleCollides( struct ECS_Manager *manager,
             break;
         }
     }
+
+    if (dpos.x > 0.01f && fabsf(dpos.y) < 0.01f)
+        pos->pos.y = (r32)((int)(pos->pos.y + 0.5f));
+    if (dpos.y > 0.01f && fabsf(dpos.x) < 0.01f)
+        pos->pos.x = (r32)((int)(pos->pos.x + 0.5f));
 }
 
 /**
@@ -99,6 +127,8 @@ UPDATE(Update) /* memory, input */
 
         state->console = I_NewConsole(state->game_stack, input);
 
+        memcpy(state->map, init_map, sizeof(init_map));
+
         /* Initialize font as best possible, if it fails then ensure it's NULL */
         if (!TTF_WasInit()) {
             if (TTF_Init() == -1) {
@@ -114,30 +144,9 @@ UPDATE(Update) /* memory, input */
         /* TODO(david): initialize the game state here */
         state->manager = ECS_NewManager(state->game_stack);
 
-        u8 array[21][19] = { { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
-                             { 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
-                             { 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1 },
-                             { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
-                             { 1, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 0, 1 },
-                             { 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1 },
-                             { 1, 1, 1, 1, 0, 1, 1, 1, 9, 1, 9, 1, 1, 1, 0, 1, 1, 1, 1 },
-                             { 9, 9, 9, 1, 0, 1, 9, 9, 9, 2, 9, 9, 9, 1, 0, 1, 9, 9, 9 },
-                             { 1, 1, 1, 1, 0, 1, 9, 1, 1, 1, 1, 1, 9, 1, 0, 1, 1, 1, 1 },
-                             { 9, 9, 9, 9, 0, 9, 9, 1, 3, 4, 5, 1, 9, 9, 0, 9, 9, 9, 9 },
-                             { 1, 1, 1, 1, 0, 1, 9, 1, 1, 1, 1, 1, 9, 1, 0, 1, 1, 1, 1 },
-                             { 9, 9, 9, 1, 0, 1, 9, 9, 9, 9, 9, 9, 9, 1, 0, 1, 9, 9, 9 },
-                             { 1, 1, 1, 1, 0, 1, 9, 1, 1, 1, 1, 1, 9, 1, 0, 1, 1, 1, 1 },
-                             { 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
-                             { 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1 },
-                             { 1, 0, 0, 1, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 1, 0, 0, 1 },
-                             { 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1 },
-                             { 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1 },
-                             { 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1 },
-                             { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
-                             { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 } };
         for (int r = 0; r < 21; r++) {
             for (int c = 0; c < 19; c++) {
-                u8 val = array[r][c];
+                u8 val = state->map[r][c];
                 switch (val) {
                     case 0:
                         ECS_NewDot(state->manager, c, r);
@@ -208,16 +217,14 @@ UPDATE(Update) /* memory, input */
         move->vel = new_vel;
     }
 
-    /*
-    struct ECS_Position *player_pos = ECS_GetComponent(state->manager, eid, ECS_CPosition);
-    iter = (struct ECS_Iter){ ECS_CAI | ECS_CMovement, 0 };
-    while ((eid = ECS_NextEntity(state->manager, &iter)) != -1) {
-        struct ECS_Movement *move = ECS_GetComponent(state->manager, eid, ECS_CMovement);
-        struct ECS_AI       *ai   = ECS_GetComponent(state->manager, eid, ECS_CAI);
-
-        * determine next move /
-    }
-    */
+//    struct ECS_Position *player_pos = ECS_GetComponent(state->manager, eid, ECS_CPosition);
+//    iter = (struct ECS_Iter){ ECS_CAI | ECS_CMovement, 0 };
+//    while ((eid = ECS_NextEntity(state->manager, &iter)) != -1) {
+//        struct ECS_Movement *move = ECS_GetComponent(state->manager, eid, ECS_CMovement);
+//        struct ECS_AI       *ai   = ECS_GetComponent(state->manager, eid, ECS_CAI);
+//
+//        /* determine next move */
+//    }
 
     /* movement system */
     iter = (struct ECS_Iter){ ECS_CPosition | ECS_CMovement, 0 };
@@ -225,21 +232,25 @@ UPDATE(Update) /* memory, input */
         struct ECS_Position *pos = ECS_GetComponent(state->manager, eid, ECS_CPosition);
         struct ECS_Movement *move = ECS_GetComponent(state->manager, eid, ECS_CMovement);
 
+        u8 val = state->map[(int)(pos->pos.x + 0.5f)][(int)(pos->pos.y + 0.5f)];
+        state->map[(int)(pos->pos.x + 0.5f)][(int)(pos->pos.y + 0.5f)] = 0;
+
         if (ECS_HasComponent(state->manager, eid, ECS_CBounding)) {
             struct ECS_Bounding *box = ECS_GetComponent(state->manager, eid, ECS_CBounding);
             HandleCollides(state->manager, eid, pos, move, box);
         }
 
+        state->map[(int)(pos->pos.x + 0.5f)][(int)(pos->pos.y + 0.5f)] = val;
         move->vel = V2_Mul(0.9f, move->vel);
 
         if (0 > pos->pos.x)
-            pos->pos.x += 18.5f;
-        if (pos->pos.x > 18.5f)
-            pos->pos.x -= 18.5f;
+            pos->pos.x += 18.f;
+        if (pos->pos.x > 18.f)
+            pos->pos.x -= 18.f;
         if (0 > pos->pos.y)
-            pos->pos.y += 19.5f;
-        if (pos->pos.y > 19.5f)
-            pos->pos.y -= 19.5f;
+            pos->pos.y += 20.f;
+        if (pos->pos.y > 20.f)
+            pos->pos.y -= 20.f;
     }
 
     /* Game Logic System */

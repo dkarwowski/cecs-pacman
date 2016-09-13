@@ -13,9 +13,9 @@ ECS_NewPlayer(struct ECS_Manager *manager, int x, int y)
     u32 result = ECS_AddEntity(manager);
 
     struct ECS_Position position = { (struct Vec2){ x, y } };
-    struct ECS_Bounding bounding = { false, (struct Vec2){ 0.45f, 0.45f } };
+    struct ECS_Bounding bounding = { false, (struct Vec2){ 0.42f, 0.42f } };
     struct ECS_Movement movement = { (struct Vec2){ 0.f, 0.f }, 2.f };
-    struct ECS_Render   render   = { 0.45f, 0.45f, (SDL_Color){ 255, 255, 0, 255 } };
+    struct ECS_Render   render   = { 0.42f, 0.42f, (SDL_Color){ 255, 255, 0, 255 } };
     struct ECS_Player   player   = { 3 };
 
     ECS_AddComponent(manager, result, &position, ECS_CPosition);

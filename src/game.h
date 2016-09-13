@@ -20,6 +20,8 @@ struct GameState {
     struct ECS_Manager *manager;
     u32 player_eid;
 
+    u8 map[21][19];
+
     struct Console *console;
 };
 
