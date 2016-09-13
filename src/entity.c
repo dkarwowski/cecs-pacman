@@ -67,10 +67,35 @@ ECS_AddComponent(struct ECS_Manager *manager, u32 eid, void *component, enum ECS
 void
 ECS_RemoveComponent(struct ECS_Manager *manager, u32 eid, enum ECS_ComponentMask componentid)
 {
-    if (eid >= manager->next_eid)
-        eid = manager->entity[eid];
     ASSERT(eid < manager->next_eid);
     manager->entity[eid] &= ~componentid;
+}
+
+/**
+ */
+void *
+ECS_GetComponent(struct ECS_Manager *manager, u32 eid, enum ECS_ComponentMask componentid)
+{
+    ASSERT(eid < manager->next_eid);
+    switch (componentid) {
+#define C_COMPONENT(name, num) \
+        case ECS_C ## name : \
+            return manager->name + eid;
+        COMPONENT_BIND(C_COMPONENT)
+#undef C_COMPONENT
+        default:
+            return NULL;
+    }
+}
+
+/**
+ */
+bool
+ECS_HasComponent(struct ECS_Manager *manager, u32 eid, enum ECS_ComponentMask componentid)
+{
+    ASSERT(eid < manager->next_eid);
+    bool result = (componentid & manager->entity[eid]) == componentid;
+    return result;
 }
 
 /**
@@ -101,16 +126,7 @@ ECS_RemoveEntity(struct ECS_Manager *manager, u32 eid)
 {
     ASSERT(eid < MAX_ENTITIES);
     ASSERT(manager->next_eid > 0);
-
-    if (--manager->next_eid > eid) {
-#define C_COPY(name, num) \
-        memcpy(manager->name + eid, manager->name + manager->next_eid, sizeof(manager->name[0]));
-
-        COMPONENT_BIND(C_COPY)
-#undef C_COPY
-    }
-
-    manager->entity[manager->next_eid] = eid;
+    manager->entity[eid] = ECS_CNone;
 }
 
 /**
@@ -135,30 +151,24 @@ ECS_NextEntity(struct ECS_Manager *manager, struct ECS_Iter *iter)
 
 /**
  */
-void *
-ECS_GetComponent(struct ECS_Manager *manager, u32 eid, enum ECS_ComponentMask componentid)
+void
+ECS_ClearRemovals(struct ECS_Manager *manager)
 {
-    if (eid >= manager->next_eid)
-        eid = manager->entity[eid];
-    ASSERT(eid < manager->next_eid);
-    switch (componentid) {
-#define C_COMPONENT(name, num) \
-        case ECS_C ## name : \
-            return manager->name + eid;
-        COMPONENT_BIND(C_COMPONENT)
-#undef C_COMPONENT
-        default:
-            return NULL;
-    }
-}
+    u32 eid = 0;
+    while (eid < manager->next_eid) {
+        if (manager->entity[eid] == ECS_CNone) {
+            if (eid < --manager->next_eid) {
+#define C_COPY(name, num) \
+                memcpy(manager->name + eid, manager->name + manager->next_eid, sizeof(manager->name[0]));
 
-/**
- */
-bool
-ECS_HasComponent(struct ECS_Manager *manager, u32 eid, enum ECS_ComponentMask componentid)
-{
-    ASSERT(eid < manager->next_eid);
-    bool result = componentid & manager->entity[eid];
-    return result;
+                COMPONENT_BIND(C_COPY)
+#undef C_COPY
+                manager->entity[eid] = manager->entity[manager->next_eid];
+            }
+        }
+        else {
+            ++eid;
+        }
+    }
 }
 

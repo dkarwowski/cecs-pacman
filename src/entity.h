@@ -42,6 +42,12 @@ struct ECS_Collided {
     struct Vec2 normal;
 };
 
+struct ECS_Respawn {
+    struct Vec2 pos;
+    r32 time;
+    r32 passed;
+};
+
 #define COMPONENT_BIND(_def) \
     _def(Position, 0)        \
     _def(Movement, 1)        \
@@ -51,6 +57,7 @@ struct ECS_Collided {
     _def(Player,   5)        \
     _def(Collided, 6)        \
     _def(Bounding, 7)        \
+    _def(Respawn,  8)        \
 
 enum ECS_ComponentMask {
     ECS_CNone     = 0,
@@ -78,5 +85,6 @@ bool  ECS_HasComponent(struct ECS_Manager *manager, u32 eid, enum ECS_ComponentM
 u32  ECS_AddEntity(struct ECS_Manager *manager);
 void ECS_RemoveEntity(struct ECS_Manager *manager, u32 eid);
 i64  ECS_NextEntity(struct ECS_Manager *manager, struct ECS_Iter *iter);
+void ECS_ClearRemovals(struct ECS_Manager *manager);
 
 #endif
