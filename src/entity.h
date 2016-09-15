@@ -28,6 +28,11 @@ struct ECS_Edible {
     bool delete;
 };
 
+struct ECS_Pill {
+    r32 timer;
+    r32 time_left;
+};
+
 struct ECS_Player {
     u8 lives;
     u32 score;
@@ -37,10 +42,6 @@ struct ECS_AI {
     bool run_away;
 };
 
-struct ECS_Collided {
-    u32 with;
-    struct Vec2 normal;
-};
 
 struct ECS_Respawn {
     struct Vec2 pos;
@@ -49,15 +50,15 @@ struct ECS_Respawn {
 };
 
 #define COMPONENT_BIND(_def) \
-    _def(Position, 0)        \
-    _def(Movement, 1)        \
-    _def(Render,   2)        \
-    _def(Edible,   3)        \
-    _def(AI,       4)        \
-    _def(Player,   5)        \
-    _def(Collided, 6)        \
-    _def(Bounding, 7)        \
-    _def(Respawn,  8)        \
+    _def(Position,  0)        \
+    _def(Movement,  1)        \
+    _def(Render,    2)        \
+    _def(Edible,    3)        \
+    _def(AI,        4)        \
+    _def(Player,    5)        \
+    _def(Bounding,  6)        \
+    _def(Respawn,   7)        \
+    _def(Pill,      8)        \
 
 enum ECS_ComponentMask {
     ECS_CNone     = 0,

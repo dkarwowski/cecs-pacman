@@ -41,7 +41,8 @@ u8 init_map[21][19] = { { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
  * @box : bounding box component with collide info
  */
 void
-HandleCollides( struct ECS_Manager *manager,
+HandleCollides( struct CollisionList *collides,
+                struct ECS_Manager *manager,
                 u32 eid,
                 struct ECS_Position *pos,
                 struct ECS_Movement *move,
@@ -89,10 +90,24 @@ HandleCollides( struct ECS_Manager *manager,
                             normal = walls[walli].normal;
                             stop = true;
                         }
-                        struct ECS_Collided col = { ieid };
-                        ECS_AddComponent(manager, eid, &col, ECS_CCollided);
-                        col = (struct ECS_Collided){ eid };
-                        ECS_AddComponent(manager, ieid, &col, ECS_CCollided);
+
+                        struct CollisionNode *new = Z_PushStruct(collides->stack, struct CollisionNode, true);
+                        new->one = eid;
+                        new->two = ieid;
+                        if (collides->first == NULL) {
+                            collides->first = new;
+                            collides->first->next = NULL;
+                        }
+                        else {
+                            new->next = collides->first->next;
+                            collides->first->next = new;
+                        }
+
+                        new = Z_PushStruct(collides->stack, struct CollisionNode, true);
+                        new->one = ieid;
+                        new->two = eid;
+                        new->next = collides->first->next;
+                        collides->first->next = new;
                     }
                 }
             }
@@ -138,6 +153,9 @@ UPDATE(Update) /* memory, input */
                                         memory->temp_memsize);
 
         state->console = I_NewConsole(state->game_stack, input);
+
+        state->collides.first = NULL;
+        state->collides.stack = state->temp_stack;
 
         memcpy(state->map, init_map, sizeof(init_map));
 
@@ -188,6 +206,9 @@ UPDATE(Update) /* memory, input */
         }
     }
 
+    /* ensure stack is cleared */
+    Z_ClearStack(state->temp_stack);
+
     /* Handle Input ------------------------------------------------------- */
     I_HandleCommand(state, input);
 
@@ -231,14 +252,14 @@ UPDATE(Update) /* memory, input */
             move->vel = new_vel;
     }
 
-//    struct ECS_Position *player_pos = ECS_GetComponent(state->manager, eid, ECS_CPosition);
-//    iter = (struct ECS_Iter){ ECS_CAI | ECS_CMovement, 0 };
-//    while ((eid = ECS_NextEntity(state->manager, &iter)) != -1) {
-//        struct ECS_Movement *move = ECS_GetComponent(state->manager, eid, ECS_CMovement);
-//        struct ECS_AI       *ai   = ECS_GetComponent(state->manager, eid, ECS_CAI);
-//
-//        /* determine next move */
-//    }
+    struct ECS_Position *player_pos = ECS_GetComponent(state->manager, eid, ECS_CPosition);
+    iter = (struct ECS_Iter){ ECS_CAI | ECS_CMovement, 0 };
+    while ((eid = ECS_NextEntity(state->manager, &iter)) != -1) {
+        struct ECS_Movement *move = ECS_GetComponent(state->manager, eid, ECS_CMovement);
+        struct ECS_AI       *ai   = ECS_GetComponent(state->manager, eid, ECS_CAI);
+
+        /* determine next move */
+    }
 
     /* movement system */
     iter = (struct ECS_Iter){ ECS_CPosition | ECS_CMovement, 0 };
@@ -250,7 +271,7 @@ UPDATE(Update) /* memory, input */
         state->map[(int)(pos->pos.y + 0.5f)][(int)(pos->pos.x + 0.5f)] = 0;
 
         struct ECS_Bounding *box = ECS_GetComponent(state->manager, eid, ECS_CBounding);
-        HandleCollides(state->manager, eid, pos, move, box);
+        HandleCollides(&state->collides, state->manager, eid, pos, move, box);
 
         state->map[(int)(pos->pos.y + 0.5f)][(int)(pos->pos.x + 0.5f)] = val;
 
@@ -265,29 +286,27 @@ UPDATE(Update) /* memory, input */
     }
 
     /* Game Logic System */
-    iter = (struct ECS_Iter){ ECS_CCollided, 0 };
-    while ((eid = ECS_NextEntity(state->manager, &iter)) != -1) {
-        if (ECS_HasComponent(state->manager, eid, ECS_CPlayer)) {
-            struct ECS_Player   *player  = ECS_GetComponent(state->manager, eid, ECS_CPlayer);
-            struct ECS_Collided *collide = ECS_GetComponent(state->manager, eid, ECS_CCollided);
+    while (state->collides.first) {
+        struct CollisionNode *node = state->collides.first;
+        if (ECS_HasComponent(state->manager, node->one, ECS_CPlayer)) {
+            struct ECS_Player *player = ECS_GetComponent(state->manager, node->one, ECS_CPlayer);
 
-            if (ECS_HasComponent(state->manager, collide->with, ECS_CEdible)) {
-                struct ECS_Edible *edible = ECS_GetComponent(state->manager, collide->with, ECS_CEdible);
+            if (ECS_HasComponent(state->manager, node->two, ECS_CEdible)) {
+                struct ECS_Edible *edible = ECS_GetComponent(state->manager, node->two, ECS_CEdible);
                 player->score += edible->score;
                 if (edible->delete) {
-                    if (ECS_HasComponent(state->manager, collide->with, ECS_CRespawn | ECS_CPosition)) {
-                        struct ECS_Respawn *respawn = ECS_GetComponent(state->manager, collide->with, ECS_CRespawn);
-                        struct ECS_Position *pos = ECS_GetComponent(state->manager, collide->with, ECS_CPosition);
+                    if (ECS_HasComponent(state->manager, node->two, ECS_CRespawn | ECS_CPosition)) {
+                        struct ECS_Respawn *respawn = ECS_GetComponent(state->manager, node->two, ECS_CRespawn);
+                        struct ECS_Position *pos = ECS_GetComponent(state->manager, node->two, ECS_CPosition);
                         pos->pos = respawn->pos;
                     }
                     else {
-                        ECS_RemoveEntity(state->manager, collide->with);
+                        ECS_RemoveEntity(state->manager, node->two);
                     }
                 }
             }
-
-            if (ECS_HasComponent(state->manager, collide->with, ECS_CAI)) {
-                struct ECS_AI *ai = ECS_GetComponent(state->manager, collide->with, ECS_CAI);
+            if (ECS_HasComponent(state->manager, node->two, ECS_CAI)) {
+                struct ECS_AI *ai = ECS_GetComponent(state->manager, node->two, ECS_CAI);
                 
                 if (ai->run_away) {
                 }
@@ -298,7 +317,8 @@ UPDATE(Update) /* memory, input */
                 }
             }
         }
-        ECS_RemoveComponent(state->manager, eid, ECS_CCollided);
+
+        state->collides.first = node->next;
     }
 
     ECS_ClearRemovals(state->manager);

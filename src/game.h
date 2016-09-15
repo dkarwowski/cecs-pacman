@@ -9,6 +9,16 @@
 
 #define PIXEL_PERSQUARE (32)
 
+struct CollisionNode {
+    u32 one, two;
+    struct CollisionNode *next;
+};
+
+struct CollisionList {
+    struct Stack *stack;
+    struct CollisionNode *first;
+};
+
 struct GameState {
     bool init;
 
@@ -21,6 +31,8 @@ struct GameState {
     u32 player_eid;
 
     u8 map[21][19];
+
+    struct CollisionList collides;
 
     struct Console *console;
 };
