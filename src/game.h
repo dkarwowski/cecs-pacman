@@ -28,7 +28,7 @@ struct GameState {
     TTF_Font *font;
 
     struct ECS_Manager *manager;
-    u32 player_eid;
+    u32 playerid;
 
     u8 map[21][19];
 

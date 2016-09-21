@@ -50,6 +50,7 @@ HandleCollides( struct CollisionList *collides,
 {
     struct Vec2 dpos = V2_Mul(SEC_PER_UPDATE, move->vel);
     bool stop = false;
+    bool bounce = false;
 
     r32 tleft = 1.0f;
     for (int z = 0; z < 4 && tleft > 0.0f; z++) {
@@ -86,6 +87,9 @@ HandleCollides( struct CollisionList *collides,
                     r32 x = t * walls[walli].dx;
                     if (t > 0.0f && walls[walli].x0 < x && x < walls[walli].x1 && tmin > t) {
                         if (ibox->stop) {
+                            if (ECS_HasComponent(manager, eid, ECS_CAI)
+                                    && ECS_HasComponent(manager, ieid, ECS_CAI))
+                                bounce = true;
                             tmin = MAX(0.f, t - eps);
                             normal = walls[walli].normal;
                             stop = true;
@@ -115,8 +119,8 @@ HandleCollides( struct CollisionList *collides,
 
         if (stop) {
             pos->pos = V2_Add(pos->pos, V2_Mul(tmin, dpos));
-            move->vel = V2_Sub(move->vel, V2_Mul(V2_Dot(move->vel, normal), normal));
-            dpos = V2_Sub(dpos, V2_Mul(V2_Dot(dpos, normal), normal));
+            move->vel = V2_Sub(move->vel, V2_Mul(((bounce) ? 2 : 1) * V2_Dot(move->vel, normal), normal));
+            dpos = V2_Sub(dpos, V2_Mul(((bounce) ? 2 : 1) * V2_Dot(dpos, normal), normal));
             tleft -= tmin;
         }
         else {
@@ -197,7 +201,7 @@ UPDATE(Update) /* memory, input */
                         ECS_NewGhost(state->manager, c, r, (SDL_Color){0, 255, 255, 255});
                         break;
                     case 7:
-                        state->player_eid = ECS_NewPlayer(state->manager, c, r);
+                        state->playerid = ECS_NewPlayer(state->manager, c, r);
                         break;
                     default:
                         break;
@@ -250,15 +254,70 @@ UPDATE(Update) /* memory, input */
 
         if (fabsf(new_vel.x) > 0.000001f || fabsf(new_vel.y) > 0.000001f)
             move->vel = new_vel;
+
+        state->playerid = eid;
     }
 
-    struct ECS_Position *player_pos = ECS_GetComponent(state->manager, eid, ECS_CPosition);
-    iter = (struct ECS_Iter){ ECS_CAI | ECS_CMovement, 0 };
+    iter = (struct ECS_Iter){ ECS_CPosition | ECS_CAI | ECS_CMovement, 0 };
     while ((eid = ECS_NextEntity(state->manager, &iter)) != -1) {
+        struct ECS_Position *pos  = ECS_GetComponent(state->manager, eid, ECS_CPosition);
         struct ECS_Movement *move = ECS_GetComponent(state->manager, eid, ECS_CMovement);
         struct ECS_AI       *ai   = ECS_GetComponent(state->manager, eid, ECS_CAI);
 
         /* determine next move */
+        struct Vec2 new_vel = { 0.f, 0.f };
+        if (fabsf(ai->goal.x - pos->pos.x) > 0.001f || fabsf(ai->goal.y - pos->pos.y) > 0.001f) {
+            /* continue in whatever direction we're supposed to be going */
+            new_vel = ai->dir;
+        }
+        else {
+            struct ECS_Position *ppos = ECS_GetComponent(state->manager, state->playerid, ECS_CPosition);
+            struct Vec2 possible[4] = { (struct Vec2){ ai->goal.x - 1.f, ai->goal.y },
+                                        (struct Vec2){ ai->goal.x + 1.f, ai->goal.y },
+                                        (struct Vec2){ ai->goal.x, ai->goal.y - 1.f },
+                                        (struct Vec2){ ai->goal.x, ai->goal.y + 1.f } };
+
+            int best = -1;
+            r32 score = (ai->run_away) ? -R32_INF : R32_INF;
+            for (int i = 0; i < 4; i++) {
+                int x = (int)(possible[i].x);
+                int y = (int)(possible[i].y);
+                printf("%d %d ", ROUND(possible[i].x - ai->from.x), ROUND(possible[i].y - ai->from.y));
+                if (state->map[y][x] == 1 || 
+                        (ROUND(possible[i].x - ai->from.x) == 0 && ROUND(possible[i].y - ai->from.y) == 0))
+                    continue;
+                printf("%d %d\n", ROUND(possible[i].x - ai->from.x), ROUND(possible[i].y - ai->from.y));
+                r32 test_score = V2_SqLen(V2_Sub(possible[i], ppos->pos));
+                if ((ai->run_away && test_score > score) || (!ai->run_away && test_score < score)) {
+                    best = i;
+                    score = test_score;
+                }
+            }
+
+            if (best == -1) {
+                ai->from = (struct Vec2){ -1.f, -1.f };
+                ai->goal = pos->pos;
+                ai->dir = (struct Vec2){ 0.f, 0.f };
+                printf("%ld (%f, %f) (%f, %f) (%f, %f)\n", eid,
+                        pos->pos.x, pos->pos.y,
+                        ai->goal.x, ai->goal.y,
+                        ai->dir.x, ai->dir.y);
+            }
+            else {
+                ai->from = ai->goal;
+                ai->goal = possible[best];
+                ai->dir = (struct Vec2){ (r32)SIGN(ROUND(ai->goal.x) - ROUND(pos->pos.x)), 
+                                         (r32)SIGN(ROUND(ai->goal.y) - ROUND(pos->pos.y)) };
+                printf("%ld (%f, %f) (%f, %f) (%f, %f)\n", eid,
+                        pos->pos.x, pos->pos.y,
+                        ai->goal.x, ai->goal.y,
+                        ai->dir.x, ai->dir.y);
+            }
+            new_vel = ai->dir;
+        }
+
+        if (fabsf(new_vel.x) > 0.000001f || fabsf(new_vel.y) > 0.000001f)
+            move->vel = new_vel;
     }
 
     /* movement system */
@@ -267,13 +326,13 @@ UPDATE(Update) /* memory, input */
         struct ECS_Position *pos = ECS_GetComponent(state->manager, eid, ECS_CPosition);
         struct ECS_Movement *move = ECS_GetComponent(state->manager, eid, ECS_CMovement);
 
-        u8 val = state->map[(int)(pos->pos.x + 0.5f)][(int)(pos->pos.y + 0.5f)];
-        state->map[(int)(pos->pos.y + 0.5f)][(int)(pos->pos.x + 0.5f)] = 0;
+//        u8 val = state->map[(int)(pos->pos.y + 0.5f)][(int)(pos->pos.x + 0.5f)];
+//        state->map[(int)(pos->pos.y + 0.5f)][(int)(pos->pos.x + 0.5f)] = 9;
 
         struct ECS_Bounding *box = ECS_GetComponent(state->manager, eid, ECS_CBounding);
         HandleCollides(&state->collides, state->manager, eid, pos, move, box);
 
-        state->map[(int)(pos->pos.y + 0.5f)][(int)(pos->pos.x + 0.5f)] = val;
+//        state->map[(int)(pos->pos.y + 0.5f)][(int)(pos->pos.x + 0.5f)] = val;
 
         if (0 > pos->pos.x)
             pos->pos.x += 18.f;
@@ -302,6 +361,10 @@ UPDATE(Update) /* memory, input */
                     }
                     else {
                         ECS_RemoveEntity(state->manager, node->two);
+                        if (ECS_HasComponent(state->manager, node->two, ECS_CPosition)) {
+                            struct ECS_Position *pos = ECS_GetComponent(state->manager, node->two, ECS_CPosition);
+                            state->map[ROUND(pos->pos.y)][ROUND(pos->pos.x)] = 9;
+                        }
                     }
                 }
             }
@@ -316,6 +379,14 @@ UPDATE(Update) /* memory, input */
                         /* handle lost game */;
                 }
             }
+        }
+
+        if (ECS_HasComponent(state->manager, node->one, ECS_CAI | ECS_CPosition)) {
+            struct ECS_AI *ai = ECS_GetComponent(state->manager, node->one, ECS_CAI);
+            struct ECS_Position *pos = ECS_GetComponent(state->manager, node->one, ECS_CPosition);
+
+            ai->goal = pos->pos;
+            ai->from = (struct Vec2){ (r32)ROUND(pos->pos.x), (r32)ROUND(pos->pos.y) };
         }
 
         state->collides.first = node->next;
@@ -363,6 +434,36 @@ RENDER(Render) /* memory, renderer, dt */
                           2 * render->w * PIXEL_PERSQUARE, 2 * render->h * PIXEL_PERSQUARE };
         SDL_SetRenderDrawColor(renderer, render->color.r, render->color.g, render->color.b, render->color.a);
         SDL_RenderFillRect(renderer, &rect);
+    }
+
+    for (int y = 0; y < 21; y++) {
+        for (int x = 0; x < 19; x++) {
+            SDL_Rect rect = { (x+1) * PIXEL_PERSQUARE, (y+1) * PIXEL_PERSQUARE,
+                              0.2 * PIXEL_PERSQUARE, 0.2 * PIXEL_PERSQUARE };
+
+            switch(state->map[y][x]) {
+                case 0:
+                case 9:
+                    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+                    break;
+                case 1:
+                    SDL_SetRenderDrawColor(renderer, 100, 0, 0, 255);
+                    break;
+                case 2:
+                case 3:
+                case 4:
+                case 5:
+                    SDL_SetRenderDrawColor(renderer, 0, 100, 0, 255);
+                    break;
+                case 7:
+                    SDL_SetRenderDrawColor(renderer, 0, 0, 255, 255);
+                    break;
+                default:
+                    break;
+            }
+
+            SDL_RenderFillRect(renderer, &rect);
+        }
     }
 
     if (I_IsEnabled(state->console) && state->font != NULL) {

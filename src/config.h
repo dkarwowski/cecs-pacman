@@ -27,6 +27,9 @@
 #define MIN(a, b) ((a < b) ? a : b)
 #define MAX(a, b) ((a > b) ? a : b)
 #define SIGN(a) ((0.0001f < a) - (a < -0.0001f))
+#define ROUND(a) ((int)(a + 0.499f))
+
+#define R32_INF INFINITY
 
 /* define true and false stuff here, no stdbool */
 #define true          1
