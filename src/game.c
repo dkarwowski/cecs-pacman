@@ -272,21 +272,19 @@ UPDATE(Update) /* memory, input */
         }
         else {
             struct ECS_Position *ppos = ECS_GetComponent(state->manager, state->playerid, ECS_CPosition);
-            struct Vec2 possible[4] = { (struct Vec2){ ai->goal.x - 1.f, ai->goal.y },
-                                        (struct Vec2){ ai->goal.x + 1.f, ai->goal.y },
-                                        (struct Vec2){ ai->goal.x, ai->goal.y - 1.f },
-                                        (struct Vec2){ ai->goal.x, ai->goal.y + 1.f } };
+            struct Vec2 possible[4] = { (struct Vec2){ ROUND(pos->pos.x - 1.f), ROUND(pos->pos.y) },
+                                        (struct Vec2){ ROUND(pos->pos.x + 1.f), ROUND(pos->pos.y) },
+                                        (struct Vec2){ ROUND(pos->pos.x), ROUND(pos->pos.y - 1.f) },
+                                        (struct Vec2){ ROUND(pos->pos.x), ROUND(pos->pos.y + 1.f) } };
 
             int best = -1;
             r32 score = (ai->run_away) ? -R32_INF : R32_INF;
             for (int i = 0; i < 4; i++) {
                 int x = (int)(possible[i].x);
                 int y = (int)(possible[i].y);
-                printf("%d %d ", ROUND(possible[i].x - ai->from.x), ROUND(possible[i].y - ai->from.y));
                 if (state->map[y][x] == 1 || 
                         (ROUND(possible[i].x - ai->from.x) == 0 && ROUND(possible[i].y - ai->from.y) == 0))
                     continue;
-                printf("%d %d\n", ROUND(possible[i].x - ai->from.x), ROUND(possible[i].y - ai->from.y));
                 r32 test_score = V2_SqLen(V2_Sub(possible[i], ppos->pos));
                 if ((ai->run_away && test_score > score) || (!ai->run_away && test_score < score)) {
                     best = i;
@@ -298,7 +296,7 @@ UPDATE(Update) /* memory, input */
                 ai->from = (struct Vec2){ -1.f, -1.f };
                 ai->goal = pos->pos;
                 ai->dir = (struct Vec2){ 0.f, 0.f };
-                printf("%ld (%f, %f) (%f, %f) (%f, %f)\n", eid,
+                printf("-1: %ld (%f, %f) (%f, %f) (%f, %f)\n", eid,
                         pos->pos.x, pos->pos.y,
                         ai->goal.x, ai->goal.y,
                         ai->dir.x, ai->dir.y);
@@ -306,9 +304,9 @@ UPDATE(Update) /* memory, input */
             else {
                 ai->from = ai->goal;
                 ai->goal = possible[best];
-                ai->dir = (struct Vec2){ (r32)SIGN(ROUND(ai->goal.x) - ROUND(pos->pos.x)), 
-                                         (r32)SIGN(ROUND(ai->goal.y) - ROUND(pos->pos.y)) };
-                printf("%ld (%f, %f) (%f, %f) (%f, %f)\n", eid,
+                ai->dir = (struct Vec2){ (r32)SIGN(ai->goal.x - ROUND(pos->pos.x)), 
+                                         (r32)SIGN(ai->goal.y - ROUND(pos->pos.y)) };
+                printf(" 1: %ld (%f, %f) (%f, %f) (%f, %f)\n", eid,
                         pos->pos.x, pos->pos.y,
                         ai->goal.x, ai->goal.y,
                         ai->dir.x, ai->dir.y);
