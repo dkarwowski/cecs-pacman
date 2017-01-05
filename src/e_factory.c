@@ -97,8 +97,7 @@ ECS_NewGhost(struct ECS_Manager *manager, int x, int y, SDL_Color color)
     struct ECS_Bounding bounding = { true, (struct Vec2){ 0.45f, 0.45f } };
     struct ECS_Movement movement = { (struct Vec2) { 0.f, 0.f }, 1.f };
     struct ECS_Render   render   = { 0.45f, 0.45f, color };
-    struct ECS_AI       ai       = { false, 
-                                     (struct Vec2){ x, y }, (struct Vec2){ 0.f, 0.f }, (struct Vec2){ 0.f, 0.f } };
+    struct ECS_AI       ai       = { false, true, (struct Vec2){ 0.f, 0.f }, (struct Vec2){ 0.f, 0.f } };
     struct ECS_Respawn  respawn  = { (struct Vec2){ x, y }, 2.f, 0.f };
 
     ECS_AddComponent(manager, result, &position, ECS_CPosition);

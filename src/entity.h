@@ -40,9 +40,9 @@ struct ECS_Player {
 
 struct ECS_AI {
     bool run_away;
-    struct Vec2 goal;
+    bool needs_dir;
     struct Vec2 dir;
-    struct Vec2 from;
+    struct Vec2 from_dir;
 };
 
 

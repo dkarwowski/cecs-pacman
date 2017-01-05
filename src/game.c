@@ -266,7 +266,7 @@ UPDATE(Update) /* memory, input */
 
         /* determine next move */
         struct Vec2 new_vel = { 0.f, 0.f };
-        if (fabsf(ai->goal.x - pos->pos.x) > 0.001f || fabsf(ai->goal.y - pos->pos.y) > 0.001f) {
+        if (!ai->needs_dir) {
             /* continue in whatever direction we're supposed to be going */
             new_vel = ai->dir;
         }
@@ -282,8 +282,7 @@ UPDATE(Update) /* memory, input */
             for (int i = 0; i < 4; i++) {
                 int x = (int)(possible[i].x);
                 int y = (int)(possible[i].y);
-                if (state->map[y][x] == 1 || 
-                        (ROUND(possible[i].x - ai->from.x) == 0 && ROUND(possible[i].y - ai->from.y) == 0))
+                if (state->map[y][x] == 1)
                     continue;
                 r32 test_score = V2_SqLen(V2_Sub(possible[i], ppos->pos));
                 if ((ai->run_away && test_score > score) || (!ai->run_away && test_score < score)) {
@@ -293,24 +292,15 @@ UPDATE(Update) /* memory, input */
             }
 
             if (best == -1) {
-                ai->from = (struct Vec2){ -1.f, -1.f };
-                ai->goal = pos->pos;
+                ai->needs_dir = true;
                 ai->dir = (struct Vec2){ 0.f, 0.f };
-                printf("-1: %ld (%f, %f) (%f, %f) (%f, %f)\n", eid,
-                        pos->pos.x, pos->pos.y,
-                        ai->goal.x, ai->goal.y,
-                        ai->dir.x, ai->dir.y);
             }
             else {
-                ai->from = ai->goal;
-                ai->goal = possible[best];
-                ai->dir = (struct Vec2){ (r32)SIGN(ai->goal.x - ROUND(pos->pos.x)), 
-                                         (r32)SIGN(ai->goal.y - ROUND(pos->pos.y)) };
-                printf(" 1: %ld (%f, %f) (%f, %f) (%f, %f)\n", eid,
-                        pos->pos.x, pos->pos.y,
-                        ai->goal.x, ai->goal.y,
-                        ai->dir.x, ai->dir.y);
+                ai->needs_dir = false;
+                ai->dir = (struct Vec2){ (r32)SIGN(possible[best].x - ROUND(pos->pos.x)), 
+                                         (r32)SIGN(possible[best].y - ROUND(pos->pos.y)) };
             }
+
             new_vel = ai->dir;
         }
 
@@ -379,12 +369,11 @@ UPDATE(Update) /* memory, input */
             }
         }
 
-        if (ECS_HasComponent(state->manager, node->one, ECS_CAI | ECS_CPosition)) {
+        if (ECS_HasComponent(state->manager, node->one, ECS_CAI)) {
             struct ECS_AI *ai = ECS_GetComponent(state->manager, node->one, ECS_CAI);
-            struct ECS_Position *pos = ECS_GetComponent(state->manager, node->one, ECS_CPosition);
+            ai->needs_dir = true;
 
-            ai->goal = pos->pos;
-            ai->from = (struct Vec2){ (r32)ROUND(pos->pos.x), (r32)ROUND(pos->pos.y) };
+            printf("collided with: %u\n", node->two);
         }
 
         state->collides.first = node->next;
