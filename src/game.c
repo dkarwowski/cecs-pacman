@@ -252,7 +252,7 @@ UPDATE(Update) /* memory, input */
             move->vel = new_vel;
     }
 
-    struct ECS_Position *player_pos = ECS_GetComponent(state->manager, eid, ECS_CPosition);
+    //struct ECS_Position *player_pos = ECS_GetComponent(state->manager, eid, ECS_CPosition);
     iter = (struct ECS_Iter){ ECS_CAI | ECS_CMovement, 0 };
     while ((eid = ECS_NextEntity(state->manager, &iter)) != -1) {
         struct ECS_Movement *move = ECS_GetComponent(state->manager, eid, ECS_CMovement);
@@ -267,13 +267,19 @@ UPDATE(Update) /* memory, input */
         struct ECS_Position *pos = ECS_GetComponent(state->manager, eid, ECS_CPosition);
         struct ECS_Movement *move = ECS_GetComponent(state->manager, eid, ECS_CMovement);
 
-        u8 val = state->map[(int)(pos->pos.x + 0.5f)][(int)(pos->pos.y + 0.5f)];
-        state->map[(int)(pos->pos.y + 0.5f)][(int)(pos->pos.x + 0.5f)] = 0;
+        int posx = (int)(pos->pos.x + 0.5f);
+        int posy = (int)(pos->pos.y + 0.5f);
+
+        u8 val = state->map[posy][posx];
+        state->map[posy][posx] = 0;
 
         struct ECS_Bounding *box = ECS_GetComponent(state->manager, eid, ECS_CBounding);
         HandleCollides(&state->collides, state->manager, eid, pos, move, box);
 
-        state->map[(int)(pos->pos.y + 0.5f)][(int)(pos->pos.x + 0.5f)] = val;
+        posx = (int)(pos->pos.x + 0.5f);
+        posy = (int)(pos->pos.y + 0.5f);
+
+        state->map[posy][posx] = val;
 
         if (0 > pos->pos.x)
             pos->pos.x += 18.f;
